@@ -1,0 +1,49 @@
+#En este script calculo el valor del factor LTE de cada aerogenerador y de cada una de sus partes
+
+import pandas as pd
+import os
+import numpy as np
+
+#### Calcular RUL
+print('Calcular RUL')
+df_Rul = pd.DataFrame(columns=['Componente'])
+df_Rul=df_Rul.set_index('Componente')
+
+df_Rul_parameter = pd.read_excel(r'C:\Prueba\Rul_parameters.xlsx')
+path_lte = r'C:\Prueba\Cayo\LTE'
+
+
+for file in os.listdir(path_lte):
+    if file.startswith('LTE'):
+        df_lte = pd.read_excel(os.path.join(path_lte,file))
+        ida = file.split('_')[-1].split('.')[0]
+        # aero = str(int(ida.split('A')[-1])-25000)       
+        aero = str(int(ida.split('A')[-1])-10000)         
+        print('_______________Aero: ', aero)
+        
+        for i,r in df_Rul_parameter.iterrows():
+            print('i: ', i)
+            print('r: ', r)
+            componente = r[df_Rul_parameter.columns[0]]
+            print('Componente: ', componente)
+            ltes = []
+            for par in ['Parameter 1', 'Parameter 2']:
+                # print('par: ', par)
+                parametro = r[par]
+                print('parametro: ', parametro)
+                try:
+                    val = df_lte.loc[df_lte['Variable'] == parametro,r['m']].values[0]
+                    print('val: ', val)
+                    ltes.append(np.round(val,2))
+                except:
+                    ltes.append(np.nan)
+               
+                df_Rul.loc[componente, 'LTE T'+aero] = min(ltes)
+path_excel = r'C:\Prueba'
+excel_name = os.path.join(path_excel,f'Calculo_RUL.xlsx')
+sheet = 'Rul'
+
+with pd.ExcelWriter(
+    excel_name, if_sheet_exists="overlay", engine="openpyxl", mode="a") as xl_writer:
+    df_Rul.to_excel(xl_writer, sheet_name=sheet)
+            
