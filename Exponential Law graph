@@ -1,0 +1,26 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+#Dataframe a partir del archivo pkl
+data_path=r'C:\Prueba'
+excel_path='\PLExp_Hub.xlsx'
+df = pd.read_excel(data_path+excel_path, usecols='B:D')
+df.loc[:,'Limite Inferior'] = df['PLExp'] - df['PLExp STD']
+df.loc[:,'Limite Superior'] = df['PLExp'] + df['PLExp STD']
+df_=df.reset_index().to_numpy()
+
+fig,ax = plt.subplots()
+plt.xlim(0,25)
+plt.ylim(0.3,0.41)
+x=df_[:,1]
+y=df_[:,2]
+lim_inf=df_[:,4]
+lim_sup=df_[:,5]
+width=0.3
+
+ax.fill_between(x, lim_inf, lim_sup, alpha=.2)
+ax.plot(x,y,linewidth=2)
+plt.xlabel('Velocidad del Viento a la altura del buje (80m) (m/s)')
+plt.ylabel('PLExp')
+plt.show()
