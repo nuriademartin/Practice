@@ -1,0 +1,63 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+import re
+
+def weib(x,n,a):
+    return (a / n) * (x / n)**(a - 1) * np.exp(-(x / n)**a)
+
+input_path = r'C:\Prueba'
+file_name_1 =  f'Weibulls_1.xlsx'
+data_path_1 = os.path.join(input_path,file_name_1)
+file_name_2 =  f'Weibulls_2.xlsx'
+data_path_2 = os.path.join(input_path,file_name_2)
+
+
+df_1 = pd.read_excel(data_path_1, nrows=14)
+df_2 = pd.read_excel(data_path_2, nrows=14)
+
+result_1=[]
+for indice, values in zip(list(df_1.loc[:,'Velocidad_Norm']), list(df_1.loc[:,'Velocidad_Norm'].values )):
+    match = re.findall('\d{1,}', indice)        #datos tipo (0,2],(2,4]...
+    intervalStart = float(match[0])
+    intervalEnd = float(match[1])
+    average = (intervalEnd + intervalStart)/2
+    print(f'Average of  {indice} is {average}')
+    result_1.append(average)
+    del match,intervalEnd,intervalStart,average
+
+result_2=[]
+for indice, values in zip(list(df_2.loc[:,'Velocidad_Norm']), list(df_2.loc[:,'Velocidad_Norm'].values )):
+    match = re.findall('\d{1,}', indice)        #datos tipo (0,2],(2,4]...
+    intervalStart = float(match[0])
+    intervalEnd = float(match[1])
+    average = (intervalEnd + intervalStart)/2
+    print(f'Average of  {indice} is {average}')
+    result_2.append(average)
+    del match,intervalEnd,intervalStart,average
+
+df_1.loc[:,'Velocidad'] = result_1
+df_1.loc[:,'Weibull'] = df_1.loc[:,'Weibull_01']*100
+dff_1 = df_1[['Velocidad','Weibull']]
+
+df_2.loc[:,'Velocidad'] = result_2
+df_2.loc[:,'Weibull'] = df_2.loc[:,'Weibull_01']*100
+dff_2 = df_2[['Velocidad','Weibull']]
+
+fig,ax=plt.subplots()
+
+x_1=dff_1['Velocidad']
+y_1=dff_1['Weibull']
+ax.plot(x_1,y_1, color='royalblue')
+
+x_2=dff_2['Velocidad']
+y_2=dff_2['Weibull']
+ax.plot(x_2,y_2,color='mediumseagreen')
+
+
+ax.legend(['1','2'])
+ax.set_title('Distribución de Weibull de la velocidad del viento')
+ax.set_xlabel('Velocidad del viento (m/s)')
+ax.set_ylabel('Frecuencia (%)')
