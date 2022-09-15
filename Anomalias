@@ -1,0 +1,104 @@
+import pandas as pd
+import numpy as np
+import os
+import re
+import matplotlib.pyplot as plt
+from sklearn.cluster import DBSCAN
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+
+#EN ESTE ARCHIVO SE GRAFICA POTENCIA-PITCH Y SE PINTAN EN ROJO LOS PUNTOS CONSIDERADOS ANOMALIAS SEGÚN EL DBSCAN Y LOS PARÁMETROS QUE LE HEMOS PASADO
+
+############################## INPUTS #####################################################################################
+#### Carpeta con pkl de entrada
+input_path = r'C:\Prueba\Input'
+#### Aero seleccionar
+aero = '01'
+#### Año 
+año = '2020'
+#### Carpeta para salida de la base de datos identificando anomalias
+out_path = r'C:\Prueba\Anomalias'
+
+############################## INPUTS #####################################################################################
+#### Carga de df
+df_path = os.path.join(input_path,f'DATA_{aero}_{año}.pkl')
+df = pd.read_pickle(df_path)
+df = df.reset_index()
+
+############################## Parametros #####################################################################################
+#### Variable X
+var_x = 'Potencia'
+#### Variable Y
+var_y = 'Pitch'
+
+#### Anchura de Bins en x
+pot_max = df['Potencia'].max()
+print('Potencia máxima: ', pot_max)
+print('--------------------')
+delta_x = 0.00002*pot_max
+print('delta_x: ', delta_x)
+#### Radio del DBSCAN
+pitch_max = df['Pitch'].max()
+print('Pitch máximo: ', pitch_max)
+rardio = 0.0000115*pitch_max
+print('Radio: ', rardio)
+
+#### Numero minimo de puntos en el radio para considerarse parte de un grupo
+n_puntos = 18
+
+############################## Lanzamiento #####################################################################################
+select_columns = np.unique(['Fecha',var_x,var_y,'Velocidad','Potencia'])
+dfin = df[select_columns].copy()
+del df
+
+#### Filtramos valores Nan en las variables seleccionadas
+dfin = dfin.dropna(subset=[var_x,var_y]).copy()
+print('Aerogenerador ', aero, ':', len(dfin), 'puntos válidos')
+dfin.loc[:,var_x+'_scaled'] = dfin[var_x]/dfin[var_x].max()
+dfin.loc[:,var_y+'_scaled'] = dfin[var_y]/dfin[var_y].max()
+
+df2 = pd.DataFrame()
+x_min = dfin[var_x+'_scaled'].min()
+# print('x_min: ', x_min)
+x_max = dfin[var_x+'_scaled'].max()
+# print('x_max: ', x_max)
+
+##### Filtramos el DF por saltos de delta_x
+for x in np.arange(x_min,x_max+delta_x,delta_x):
+    # print('x: ', x)
+    df1 = dfin.loc[(dfin[var_x+'_scaled']>= x)&(dfin[var_x+'_scaled'] < x+delta_x),:].copy()
+    if len(df1) > 1:
+        X = np.array([df1[var_x+'_scaled'],df1[var_y+'_scaled']])
+        y_pred = DBSCAN(eps=rardio, min_samples=n_puntos).fit_predict(X.T)
+        df1.loc[:,'Cluster'] = y_pred
+        c = df1.groupby(df1['Cluster'])['Cluster'].count()
+        c = c[c.index != -1]
+        if len(c) > 0:
+                cmax = c[c == max(c)].index[0]
+                # print(c[cmax])
+                df1.loc[:,'Cluster'] = np.where(df1['Cluster'] == cmax,1,-1)
+        else:
+            df1.loc[:,'Cluster'] = -1
+    else:
+        pass
+    df2 = pd.concat([df2,df1],axis=0)
+
+dfm = df2.loc[df2['Cluster'] == -1,:].copy()
+dfn = df2.loc[df2['Cluster'] != -1,:].copy()
+
+fig, ax = plt.subplots(1,2)
+ax[0].scatter(dfm[var_x+'_scaled'],dfm[var_y+'_scaled'],color='red',alpha=0.1,s=1,label='Anomalo')
+ax[0].scatter(dfn[var_x+'_scaled'],dfn[var_y+'_scaled'],color='green',alpha=0.1,s=1,label='Normal')
+ax[0].set_xlabel(var_x)
+ax[0].set_ylabel(var_y)
+# ax[0].legend(loc='upper right')
+ax[0].xaxis.set_minor_locator(MultipleLocator(delta_x))
+#ax[0].grid(visible=True,which='both')
+
+ax[1].scatter(dfm['Velocidad'],dfm['Potencia'],color='red',alpha=0.1,s=1,label='Anomalo')
+ax[1].scatter(dfn['Velocidad'],dfn['Potencia'],color='green',alpha=0.1,s=1,label='Normal')
+ax[1].set_xlabel(var_x)
+ax[1].set_ylabel(var_y)
+# ax[1].legend(loc='upper right')
+
+dfout = df2[['Fecha','Cluster']]
+dfout.to_pickle(os.path.join(out_path, f'Anomalias_Pitch_{aero}_{año}.pkl'))
