@@ -10,7 +10,7 @@ df_Rul = pd.DataFrame(columns=['Componente'])
 df_Rul=df_Rul.set_index('Componente')
 
 df_Rul_parameter = pd.read_excel(r'C:\Prueba\Rul_parameters.xlsx')
-path_lte = r'C:\Prueba\Cayo\LTE'
+path_lte = r'C:\Prueba\C\LTE'
 
 
 for file in os.listdir(path_lte):
