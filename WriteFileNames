@@ -1,0 +1,5 @@
+import os
+
+# leer la carpeta y escribir el nombre de todos los archivos que están dentro
+ for f in os.listdir(data_path):
+     print(f)
